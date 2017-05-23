@@ -1,5 +1,5 @@
 #include <pebble.h>
-#include <biocomPebbleDefinitions.h>
+// #include <biocomPebbleDefinitions.h>
 
 // #include <unistd.h>
 
