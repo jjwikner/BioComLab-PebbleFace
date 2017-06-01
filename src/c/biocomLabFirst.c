@@ -9,10 +9,13 @@
 // BioCom Lab
 //
 
+#define MSG_LENGTH 48
+
 static Window *s_window;
 static TextLayer *s_text_layer;
 // static GRect bounds;
-	
+char message[MSG_LENGTH];	
+
 static void deinit(void) {
 	// Destroy the text layer
 	text_layer_destroy(s_text_layer);	
@@ -25,13 +28,83 @@ static void deinit(void) {
 static void biocomSelectSingleClickHandler(ClickRecognizerRef recognizer, void *context) {
 	// Detect that a single click has just occured. 
 	// Notice that the binders is independent of the button clicked.
+	accel_tap_service_unsubscribe();
 	deinit();
+}
+char *itoa(int num)
+{
+  static char buff[20] = {};
+  int i = 0, temp_num = num, length = 0;
+  char *string = buff;
+  
+  if(num >= 0) { //See NOTE
+    // count how many characters in the number
+    while(temp_num) {
+      temp_num /= 10;
+      length++;
+    }
+    // assign the number to the buffer starting at the end of the 
+    // number and going to the begining since we are doing the
+    // integer to character conversion on the last number in the
+    // sequence
+    for(i = 0; i < length; i++) {
+      buff[(length-1)-i] = '0' + (num % 10);
+      num /= 10;
+    }
+    buff[i] = '\0'; // can't forget the null byte to properly end our string
+  }
+  else {
+    return "unum";
+  }
+  
+  return string;
+}
+
+static void biocomAccelTapHandler(AccelAxisType axis, int32_t direction) {
+  	// A tap event occured
+
+	int x, y, z = 0; 
+	AccelData accel = (AccelData) { .x = 0, .y = 0, .z = 0 };
+	accel_service_peek(&accel);
+	x = accel.x;
+	y = accel.y;
+	z = accel.z;
+	
+	// char message[20];	
+	if(direction == 1) {
+		// memset(&message[0], 0, sizeof(message));
+		// snprintf(message, 48, "Shaky! \n Down \n %d \n %d \n %d",  x, y, z ) ;		
+		//snprintf(message, 42, "Shaky! \n Down \n %d \n %d \n %d",  x, y, z ) ;
+		//message = "hello world this is fun stuff, right?";
+		snprintf(message, MSG_LENGTH, "Shaky! Dn \n%d %d %d", x, y, z);
+		// biocomPutHomeString(  strcat( "",   message)  );
+		// something goes wrong with the pointers here
+		// message = strcat( strcat( strcat("Shaky! Dn ", itoa(x)), itoa(y)), itoa(z) );
+		text_layer_set_text(s_text_layer,  message);
+			   
+	}
+	else {
+		//text_layer_destroy(s_text_layer);			
+		//snprintf(message, 40, "Shaky! \n Up \n%d\n%d\n%d",  x, y, z ) ;	
+		//biocomPutHomeString(  strcat("", message ));
+		//snprintf(message, 32, "Shaky! Up \n %d %d %d",  x, y, z ) ;
+		// biocomPutHomeString(  strcat( "",   message)  );
+		snprintf(message, MSG_LENGTH, "Shaky! Up \n%d %d %d", x, y, z);
+		text_layer_set_text(s_text_layer, message);
+		
+	}
+
+//	uint32_t num_samples = 3;  // Number of samples per batch/callback	
+	// Subscribe to batched data events
+	// accel_data_service_subscribe(num_samples, accel_data_handler);	
 }
 
 static void biocomUpSingleClickHandler(ClickRecognizerRef recognizer, void *context) {
 	// A single click has just occured
 	// In this case, create a buzzing sound to illustrate this
+	accel_tap_service_unsubscribe();
 	vibes_long_pulse();
+	accel_tap_service_subscribe(biocomAccelTapHandler);
 }
 
 static void biocomDownSingleClickHandler(ClickRecognizerRef recognizer, void *context) {
@@ -44,8 +117,9 @@ static void biocomDownSingleClickHandler(ClickRecognizerRef recognizer, void *co
   	.durations = segments,
   	.num_segments = ARRAY_LENGTH(segments),
 	};
-
+	accel_tap_service_unsubscribe();
 	vibes_enqueue_custom_pattern(pat);
+	accel_tap_service_subscribe(biocomAccelTapHandler);
 }
 
 static void biocomClickConfigProvider(void *context) { // Rename biocom	
@@ -60,7 +134,7 @@ static void biocomClickConfigProvider(void *context) { // Rename biocom
 
 	ButtonId bidDn = BUTTON_ID_DOWN;
 	window_single_click_subscribe(bidDn, biocomDownSingleClickHandler);
-}
+} 
 
 
 void biocomPutHomeString(char *windowString) {
@@ -90,41 +164,6 @@ void biocomPutHomeString(char *windowString) {
 	// APP_LOG(APP_LOG_LEVEL_DEBUG, "Just pushed a window!");
 }
 
-static void accel_tap_handler(AccelAxisType axis, int32_t direction) {
-  	// A tap event occured
-	char* message = ""; 
-	int x,y,z = 0;
-	AccelData accel = (AccelData) { .x = 0, .y = 0, .z = 0 };
-	accel_service_peek(&accel);
-	x = accel.x;
-	y = accel.y;
-	z = accel.z;
-	
-	// char message[20];	
-	if(direction == 1) {
-		// memset(&message[0], 0, sizeof(message));
-		// snprintf(message, 48, "Shaky! \n Down \n %d \n %d \n %d",  x, y, z ) ;		
-		//snprintf(message, 42, "Shaky! \n Down \n %d \n %d \n %d",  x, y, z ) ;
-		//message = "hello world this is fun stuff, right?";
-		snprintf(message, 32, "Shaky! Down \n %d %d %d",  x, y, z ) ;
-		// biocomPutHomeString(  strcat( "",   message)  );
-		text_layer_set_text(s_text_layer, message);
-		
-	}
-	else {
-		//text_layer_destroy(s_text_layer);			
-		//snprintf(message, 40, "Shaky! \n Up \n%d\n%d\n%d",  x, y, z ) ;	
-		//biocomPutHomeString(  strcat("", message ));
-		snprintf(message, 32, "Shaky! Up \n %d %d %d",  x, y, z ) ;
-		// biocomPutHomeString(  strcat( "",   message)  );
-		text_layer_set_text(s_text_layer, message);
-		
-	}
-
-//	uint32_t num_samples = 3;  // Number of samples per batch/callback	
-	// Subscribe to batched data events
-	// accel_data_service_subscribe(num_samples, accel_data_handler);	
-}
 
 static void accel_data_handler(AccelData *data, uint32_t num_samples) {
   // Read sample 0's x, y, and z values
@@ -150,11 +189,10 @@ static void accel_data_handler(AccelData *data, uint32_t num_samples) {
 static void init(void) {
 	s_window = window_create();
 	window_set_click_config_provider(s_window, biocomClickConfigProvider);
-
+	accel_tap_service_subscribe(biocomAccelTapHandler);
 	biocomPutHomeString("\nBioCom Lab\nWristband\n");
 	// psleep(500);
 	
-	accel_tap_service_subscribe(accel_tap_handler);
 }
 
 int main(void) {
