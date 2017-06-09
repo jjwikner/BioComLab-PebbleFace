@@ -14,14 +14,21 @@
 static Window *s_window;
 static TextLayer *s_text_layer;
 // static GRect bounds;
-char message[MSG_LENGTH];	
+char message[MSG_LENGTH];
+static BitmapLayer *s_bitmap_layer;
+static GBitmap *s_bitmap;
+
 
 static void deinit(void) {
 	// Destroy the text layer
 	text_layer_destroy(s_text_layer);	
 	// Destroy the window
 	accel_tap_service_unsubscribe();
-//	window_single_click_unsubscribe();
+	//	window_single_click_unsubscribe();
+	
+	// Destroy the BitmapLayer
+	bitmap_layer_destroy(s_bitmap_layer);
+
 	window_destroy(s_window);
 }
 	
@@ -64,19 +71,20 @@ static void biocomAccelTapHandler(AccelAxisType axis, int32_t direction) {
   	// A tap event occured
 
 	int x, y, z = 0; 
+	int p = 0;
 	AccelData accel = (AccelData) { .x = 0, .y = 0, .z = 0 };
 	accel_service_peek(&accel);
 	x = accel.x;
 	y = accel.y;
 	z = accel.z;
-	
+	p = x*x + y*y + z*z;
 	// char message[20];	
 	if(direction == 1) {
 		// memset(&message[0], 0, sizeof(message));
 		// snprintf(message, 48, "Shaky! \n Down \n %d \n %d \n %d",  x, y, z ) ;		
 		//snprintf(message, 42, "Shaky! \n Down \n %d \n %d \n %d",  x, y, z ) ;
 		//message = "hello world this is fun stuff, right?";
-		snprintf(message, MSG_LENGTH, "Shaky! Dn \n%d %d %d", x, y, z);
+		snprintf(message, MSG_LENGTH, "Shaky! Dn \n%d %d %d\n%d", x, y, z, p);
 		// biocomPutHomeString(  strcat( "",   message)  );
 		// something goes wrong with the pointers here
 		// message = strcat( strcat( strcat("Shaky! Dn ", itoa(x)), itoa(y)), itoa(z) );
@@ -89,7 +97,7 @@ static void biocomAccelTapHandler(AccelAxisType axis, int32_t direction) {
 		//biocomPutHomeString(  strcat("", message ));
 		//snprintf(message, 32, "Shaky! Up \n %d %d %d",  x, y, z ) ;
 		// biocomPutHomeString(  strcat( "",   message)  );
-		snprintf(message, MSG_LENGTH, "Shaky! Up \n%d %d %d", x, y, z);
+		snprintf(message, MSG_LENGTH, "Shaky! Up \n%d %d %d\n%d", x, y, z, p);
 		text_layer_set_text(s_text_layer, message);
 		
 	}
@@ -100,11 +108,29 @@ static void biocomAccelTapHandler(AccelAxisType axis, int32_t direction) {
 }
 
 static void biocomUpSingleClickHandler(ClickRecognizerRef recognizer, void *context) {
+	Layer *window_layer = window_get_root_layer(s_window);  	
+	GRect bounds = layer_get_bounds(window_layer);
+
+	
 	// A single click has just occured
 	// In this case, create a buzzing sound to illustrate this
 	accel_tap_service_unsubscribe();
 	vibes_long_pulse();
 	accel_tap_service_subscribe(biocomAccelTapHandler);
+	
+	// Load the image
+	s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_FILE1);
+
+	// Create a BitmapLayer
+	s_bitmap_layer = bitmap_layer_create(bounds);
+
+	// Set the bitmap and compositing mode
+	bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
+	bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
+
+	// Add to the Window
+	layer_add_child(window_layer, bitmap_layer_get_layer(s_bitmap_layer));
+	
 }
 
 static void biocomDownSingleClickHandler(ClickRecognizerRef recognizer, void *context) {
@@ -120,6 +146,10 @@ static void biocomDownSingleClickHandler(ClickRecognizerRef recognizer, void *co
 	accel_tap_service_unsubscribe();
 	vibes_enqueue_custom_pattern(pat);
 	accel_tap_service_subscribe(biocomAccelTapHandler);
+	// Destroy the BitmapLayer
+	gbitmap_destroy(s_bitmap);
+	bitmap_layer_destroy(s_bitmap_layer);
+
 }
 
 static void biocomClickConfigProvider(void *context) { // Rename biocom	

@@ -9,7 +9,17 @@
         "messageKeys": [],
         "projectType": "native",
         "resources": {
-            "media": []
+            "media": [
+                {
+                    "file": "images/pebble.png",
+                    "name": "IMAGE_FILE1",
+                    "targetPlatforms": [
+                        "aplite",
+                        "diorite"
+                    ],
+                    "type": "png"
+                }
+            ]
         },
         "sdkVersion": "3",
         "targetPlatforms": [
